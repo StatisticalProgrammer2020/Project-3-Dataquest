@@ -1,4 +1,4 @@
-# Project-2-Dataquest
+# Project-3-Dataquest
 
 This is my third project in Dataquest towards my journey in R Programming. This project aims to determine whether or not the new program launched by the bookstore was successful or not in increasing their book sales. In this project, the following concepts are used to achieve the given problem:
 + Strings
