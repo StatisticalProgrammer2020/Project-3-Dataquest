@@ -1,0 +1,253 @@
+---
+title: "Improving Book Sales and Review Quality - A Data Analysis of Book Sales taken from 2019"
+author: "Abe Ceasar Perez"
+date: "March 14, 2022"
+output: html_document
+---
+
+### Assessing the Bookstore Promotional Campaign using Data
+
+This project aims to determine whether or not the new program launched by the bookstore was successful or not in increasing their book sales. We'll be working for an unnamed book store selling programming books in the US and as analysts, our main objective is to identify any improvements in the book sales obtained in 2019.
+
+In addition to that, we'll also be making use of the following concepts in R in order to achieve the given objective:
+
++ Strings
++ Dates
++ Map function
+
+### Initial Findings
+
+Based on the outcome of this project, we've determined that the new program launched by the bookstore was not successful in increasing the programming book sales. Looking further into the analysis, we've found out that the program only had a positive effect on businesses, which was observed to have an increase in sales over individual purchases. Despite the lower impact of the program on book sales, businesses and individuals still had an overall positive reception of the launching of the program.
+
+The process of this analysis can be outlined below:
+
+### Loading the dataset
+
+The dataset can be obtained from the Data world website, which is linked here: <https://data.world/dataquest/book-sales-data>. The relevant packages for this analysis are then loaded followed by the dataset obtained from the link above. After an initial inspection of the data, it was found that the dataset contained 5,000 rows and 5 columns.
+
+```{r load_dataset, echo=TRUE, warning=FALSE}
+
+#removes messages after loading packages
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(lubridate))
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(tidyr))
+
+setwd("C:\\Users\\Abe\\Desktop\\Dataquest modules\\Data Analyst in R\\Guided Projects\\project_3")
+
+filename <- "sales2019.csv"
+df <- read_csv(filename, show_col_types = FALSE) # loads data and removes column messages
+
+dim(df) # The dataset has 5000 rows and 5 columns
+```
+
+### Inspecting the data
+
+Before proceeding with the data cleaning and analysis, we've first defined each of the variables present in the columns to better understand the context of this project. Here are the definitions below of the variables based on the data present.
+
+- date - date of book purchase
+- user_submitted_review - review by user
+- title - book title
+- total_purchased - number of books purchased
+- customer_type - type of customer who purchased
+
+```{r store_cols, echo=TRUE}
+
+columns <- colnames(df)
+columns # prints columns
+
+```
+
+To check if each variable corresponds to the correct data type,  we've used the mapping function to map each column to the typeof function. Based on the output below, most of the columns seem to have the appropriate data with the exception of the date column, which is yet to have a definite data type.
+
+```{r check_datatypes, echo=TRUE}
+
+map(df, typeof) # checks the datatype of each column
+
+```
+
+We've also checked whether each column had any missing values or not as that might affect the results of this project. It turns out that there are indeed missing values, 885 of which are missing reviews while 718 of them are missing purchase values.
+
+```{r check_missing, echo=TRUE}
+
+map(df, function(x) sum(is.na(x))) # counts the number of missing values per column
+
+```
+
+### Cleaning the Data
+
+After we've inspected the data, we'll now proceed with the cleaning phase. Since the data is found to have missing reviews, we've filtered out all rows without any reviews present. This leaves us with 4,115 observations or around 82% of the original dataset.
+
+```{r clean_dataset, echo=TRUE}
+
+df_without_na <- df %>% filter(!(is.na(user_submitted_review)))
+nrow(df) - 885 # remaining number of rows
+map(df_without_na, function(x) sum(is.na(x))) # counts the number of missing values per column
+
+```
+
+Despite the initial cleaning on the book reviews, there still seems to be missing total purchase values. Instead of removing these values, we'll be supplying these values with the average of all the available purchases made for the filtered dataset.
+
+```{r additional_cleaning, echo=TRUE}
+
+mean_without_na <- mean(df_without_na$total_purchased, na.rm=TRUE)
+df_without_na <- df_without_na %>% 
+  mutate(total_purchased = ifelse(is.na(total_purchased), 
+                                  mean_without_na, 
+                                  total_purchased)) # replaces missing total purchases with the average purchases from present books
+head(df_without_na, 10)
+
+```
+
+### Adding more columns for the analysis
+
+We'll also be adding more columns to define the sentiment of the customer based on their review as well as the period from which they have purchased. We've created a function to classify each review by sentiment using the common keywords found in each unique review and used it to create a new column of sentiments.
+
+```{r sentiments, echo=TRUE}
+
+unique(df_without_na$user_submitted_review)
+
+sentence_expression <- function(sentence){ # function to classify the sentiment of a review
+  case_when(str_detect(str_to_lower(sentence), "never|better|not|hated")==TRUE~"Negative",
+            TRUE~"Positive")
+}
+
+df_without_na <- df_without_na %>% mutate(sentiment = unlist(map(user_submitted_review, sentence_expression))) # classifies each review by sentiment using the user-defined function
+
+```
+
+Since the period of the program started on July 1, 2019, we'll label the dates prior to that as before while the succeeding dates will be labeled as after.
+
+```{r dates, echo=TRUE}
+
+df_without_na <- df_without_na %>% mutate(date = mdy(date), 
+                                          period = ifelse(ymd(date) < ymd("2019-07-01"), "Before", "After")) # modifies the date parameter and adds another column to classify the period before and after the bookstore program
+
+head(df_without_na, 10)
+
+```
+
+### How did the program affect the overall sales and experience of the customers?
+
+After the data has been fully cleaned, we've summarized the total number of purchases for each given period. Based on the results below, there seemed to have an observed drop in purchases before and after the program was lauched.
+
+
+```{r results_1, echo=TRUE}
+
+books_before_after <- df_without_na %>% 
+  group_by(period) %>% 
+  summarize(Total_purchases = sum(total_purchased)) %>% 
+  arrange(desc(period)) # counts the number of total book purchases before and after the program
+books_before_after
+
+```
+
+Looking further, we've also broken down the analysis by customer type to see which customer may have contributed to the drop in sales. It turns out that the drop in sales became evident among individuals compared to businesses which, on the contrary, saw an increase in book sales.
+
+```{r results_2, echo=TRUE}
+
+books_customer_before_after <- df_without_na %>% 
+  group_by(period, customer_type) %>% 
+  summarize(Total_purchases = sum(total_purchased)) %>% 
+  arrange(desc(period)) # counts the number of total book purchases before and after the program, as well as by customer
+
+books_customer_before_after <- pivot_wider(books_customer_before_after, 
+                                           names_from = customer_type, 
+                                           values_from = Total_purchases) # transposes the customer rows into columns
+
+books_customer_before_after
+```
+
+Using the sentiment data, we've also checked whether or not there is an improvement in positive satisfaction before and after the program. Based on the results below, there is a slight increase in positive sentiment following the launching of the book program.
+
+```{r results_3, echo=TRUE}
+
+sentiments_before_after <- df_without_na %>% 
+  group_by(period, sentiment) %>% 
+  summarise(Count = n()) %>% 
+  arrange(desc(period)) # counts the number of total sentiments before and after the program
+
+sentiments_before_after <- pivot_wider(sentiments_before_after, 
+                                       names_from = sentiment, 
+                                       values_from = Count) # transposes the sentiment rows into columns
+
+sentiments_before_after[,-2] # considers only the positive sentiments
+
+```
+
+### Re-calibrating the analysis
+
+Earlier, we've supplied the missing purchase values with the average of all available books to proceed with the analysis. For this section, we'll be taking into account the title of the book in supplying the missing purchases by calculating the mean of each book and assigning it to the corresponding titles. After supplying the missing purchases, we've generated the pivot tables to compare with the results above. 
+
+```{r recleaning_the_data, echo=TRUE}
+
+mean_per_book <- df_without_na %>% 
+  filter(total_purchased != mean_without_na) %>% 
+  group_by(title) %>% 
+  summarize(avg = mean(total_purchased)) # calculates the mean purchases per book titles
+
+df_diff_purc <- df_without_na %>% 
+  mutate(total_purchased = ifelse(total_purchased == mean_without_na, mean_per_book$avg[match(title, mean_per_book$title)], total_purchased)) # assigns the grouped mean purchases to books without purchase data
+
+head(df_diff_purc, 5) 
+```
+
+Similar to the results of the previous analysis, purchases were still found to be lower after the program compared to prior.
+
+```{r results_4, echo=TRUE}
+
+new_books_before_after <- df_diff_purc %>% 
+  group_by(period) %>% 
+  summarize(Total_purchases = sum(total_purchased)) %>% 
+  arrange(desc(period)) # aggregates the total purchases made per period
+
+new_books_before_after  
+
+```
+
+We've also analyzed further if there were any changes between the purchases made by the individuals and the businesses. Results were also identical to the previous analysis which states that individuals had lower purchases compared to businesses.
+
+```{r results_5, echo=TRUE}
+
+new_books_customer_before_after <- df_diff_purc %>% 
+  group_by(period, customer_type) %>% 
+  summarize(Total_purchases = sum(total_purchased)) %>% 
+  arrange(desc(period)) # aggregates the total purchases made per period and type of customer
+
+new_books_customer_before_after <- pivot_wider(new_books_customer_before_after, 
+                                               names_from = customer_type,
+                                               values_from = Total_purchases)# transposes the customer-type rows into columns
+
+new_books_customer_before_after
+
+```
+
+### Other recommendations
+
+Since we've looked mostly into the effect of the program on the book sales and sentiments, we've also checked whether or not we can consider other months instead to launch the book program. Based on the results below, we've identified Decemeber to be the month with the highest total number of book sales among all the other given months.
+
+```{r results_6, echo=TRUE}
+
+df_diff_purc <- df_diff_purc %>% 
+  mutate(month_purchase = month(date), 
+         day_purchase = day(date)) #creates additional columns for date
+
+purchases_by_month <- df_diff_purc %>% group_by(month_purchase) %>% summarize(total_purchased = sum(total_purchased))
+purchases_by_month #counts the number of purchases per month
+
+```
+
+### Conclusion
+
+The aim of this project was to determine if the launching of the bookstore's program was successful or not. In achieving this aim, we've considered the total number of sales accumulated for each purchase as well as the overall sentiment based on the purchase made. 
+
+Based on the results of the project, it is evident that the program was not successful in their launch based on total sales alone. It was also found that businesses in particular primarily benefited to the program due to the observed increase in total sales. Despite the lower impact in sales, there still seem to have an impovement in positive reception following the launch of the program.
+
+We recommend to the bookstore that we focus the program primarily for the businesses in order to further increase the sales of the bookstore. We also recommend to look into other months where we could move the date of the program launch (e.g. months with more purchases such as December) to further increase the sales of the book store.
+
+<br>
+<br>
+
