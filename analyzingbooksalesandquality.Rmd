@@ -1,7 +1,6 @@
 ---
 title: "Improving Book Sales and Review Quality - A Data Analysis of Book Sales taken from 2019"
 author: "Abe Ceasar Perez"
-date: "March 14, 2022"
 output: html_document
 ---
 
@@ -9,7 +8,7 @@ output: html_document
 
 This project aims to determine whether or not the new program launched by the bookstore was successful or not in increasing their book sales. We'll be working for an unnamed book store selling programming books in the US and as analysts, our main objective is to identify any improvements in the book sales obtained in 2019.
 
-In addition to that, we'll also be making use of the following concepts in R in order to achieve the given objective:
+For this project, the following concepts were applied in order to accomplish the objectives above:
 
 + Strings
 + Dates
