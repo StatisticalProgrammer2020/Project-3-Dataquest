@@ -35,8 +35,6 @@ suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(tidyr))
 
-setwd("C:\\Users\\Abe\\Desktop\\Dataquest modules\\Data Analyst in R\\Guided Projects\\project_3")
-
 filename <- "sales2019.csv"
 df <- read_csv(filename, show_col_types = FALSE) # loads data and removes column messages
 
